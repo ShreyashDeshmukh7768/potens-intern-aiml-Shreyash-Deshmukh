@@ -1,7 +1,6 @@
-"""End-to-end verification of the RAG pipeline."""
-
 from pathlib import Path
 
+from src.citations.formatter import format_answer
 from src.embeddings.vector_store import (
     COLLECTION_NAME,
     PERSIST_DIRECTORY,
@@ -15,28 +14,32 @@ from src.retrievers.semantic_retriever import retrieve_documents
 
 
 def main() -> None:
-    """Verify the complete RAG pipeline end to end."""
+    """Run the complete RAG pipeline end to end."""
+
     pdf_path = Path("data/LangChain.pdf")
-    question = "Who won the FIFA World Cup in 2022?"
+    question = "how to make dosa?"
 
     try:
-        # Step 1: Load the PDF
+        # Step 1: Load PDF
         documents = load_pdf(pdf_path)
 
         # Step 2: Split into chunks
         chunks = split_documents(documents)
 
-        # Step 3: Create the vector store
+        # Step 3: Build vector database
         create_vector_store(chunks)
 
         # Step 4: Retrieve relevant chunks
         retrieved_chunks = retrieve_documents(question, k=3)
 
-        # Step 5: Build the prompt
+        # Step 5: Build prompt
         prompt = build_prompt(question, retrieved_chunks)
 
-        # Step 6: Generate the final answer
+        # Step 6: Generate answer
         answer = generate_answer(prompt)
+
+        # Step 7: Attach citations
+        final_response = format_answer(answer, retrieved_chunks)
 
     except FileNotFoundError as exc:
         print(f"PDF file not found: {exc}")
@@ -54,43 +57,42 @@ def main() -> None:
         print(f"Unexpected error: {exc}")
         return
 
-    print("=" * 60)
-    print("RAG Pipeline Verification")
-    print("=" * 60)
+    print("=" * 70)
+    print("RAG Pipeline Summary")
+    print("=" * 70)
+    print(f"PDF: {pdf_path.name}")
+    print(f"Total Pages           : {len(documents)}")
+    print(f"Total Chunks          : {len(chunks)}")
+    print(f"Vector Collection     : {COLLECTION_NAME}")
+    print(f"Persistence Directory : {PERSIST_DIRECTORY}")
     print()
 
-    print("PDF loaded successfully")
-    print(f"Total pages loaded: {len(documents)}")
-    print(f"Total chunks generated: {len(chunks)}")
-    print("Vector store created successfully")
-    print(f"Collection name: {COLLECTION_NAME}")
-    print(f"Persistence directory: {PERSIST_DIRECTORY}")
-
-    print()
-    print("=" * 60)
-    print("Question")
-    print("=" * 60)
+    print("=" * 70)
+    print("User Question")
+    print("=" * 70)
     print(question)
-
     print()
-    print("=" * 60)
-    print("Retrieved Chunks")
-    print("=" * 60)
-    print(f"Top {len(retrieved_chunks)} chunks retrieved.")
+
+    print("=" * 70)
+    print(f"Top {len(retrieved_chunks)} Retrieved Chunks")
+    print("=" * 70)
 
     for index, chunk in enumerate(retrieved_chunks, start=1):
-        print(f"\nChunk {index}")
+        print(f"Chunk {index}")
         print(f"Chunk ID      : {chunk.metadata.get('chunk_id')}")
         print(f"Page          : {chunk.metadata.get('page')}")
         print(f"Chunk Index   : {chunk.metadata.get('chunk_index')}")
         print(f"Characters    : {len(chunk.page_content)}")
-        print(f"Preview       : {chunk.page_content[:200]}...")
+        print(
+            f"Preview       : "
+            f"{chunk.page_content[:200].replace(chr(10), ' ')}..."
+        )
+        print()
 
-    print()
-    print("=" * 60)
-    print("Generated Answer")
-    print("=" * 60)
-    print(answer)
+    print("=" * 70)
+    print("Grounded Response")
+    print("=" * 70)
+    print(final_response)
 
 
 if __name__ == "__main__":
