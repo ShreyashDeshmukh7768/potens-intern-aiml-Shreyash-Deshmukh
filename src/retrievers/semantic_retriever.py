@@ -1,8 +1,8 @@
 """Utilities for loading and querying the persisted Chroma vector store."""
 
-from langchain_chroma import Chroma
+from typing import Any
+
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFaceEmbeddings
 
 from src.embeddings.vector_store import (
     COLLECTION_NAME,
@@ -11,12 +11,15 @@ from src.embeddings.vector_store import (
 )
 
 
-def load_vector_store() -> Chroma:
+def load_vector_store() -> Any:
     """Load the persisted Chroma vector store.
 
     Returns:
         A Chroma vector store instance connected to the persisted collection.
     """
+    from langchain_chroma import Chroma
+    from langchain_huggingface import HuggingFaceEmbeddings
+
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     return Chroma(

@@ -2,17 +2,16 @@
 
 from pathlib import Path
 import shutil
+from typing import Any
 
-from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFaceEmbeddings
 
 PERSIST_DIRECTORY = "chroma_db"
 COLLECTION_NAME = "documents"
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 
 
-def create_vector_store(documents: list[Document]) -> Chroma:
+def create_vector_store(documents: list[Document]) -> Any:
     """Create and persist a Chroma vector store.
 
     Args:
@@ -34,9 +33,10 @@ def create_vector_store(documents: list[Document]) -> Chroma:
         shutil.rmtree(persist_directory)
 
     try:
-        embeddings = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL,
-        )
+        from langchain_chroma import Chroma
+        from langchain_huggingface import HuggingFaceEmbeddings
+
+        embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
         vector_store = Chroma.from_documents(
             documents=documents,
