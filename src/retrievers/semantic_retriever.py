@@ -1,0 +1,50 @@
+"""Utilities for loading and querying the persisted Chroma vector store."""
+
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from langchain_huggingface import HuggingFaceEmbeddings
+
+from src.embeddings.vector_store import (
+    COLLECTION_NAME,
+    EMBEDDING_MODEL,
+    PERSIST_DIRECTORY,
+)
+
+
+def load_vector_store() -> Chroma:
+    """Load the persisted Chroma vector store.
+
+    Returns:
+        A Chroma vector store instance connected to the persisted collection.
+    """
+    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
+    return Chroma(
+        collection_name=COLLECTION_NAME,
+        persist_directory=PERSIST_DIRECTORY,
+        embedding_function=embeddings,
+    )
+
+
+def retrieve_documents(query: str, k: int = 3) -> list[Document]:
+    """Retrieve the most relevant documents for a query.
+
+    Args:
+        query: User query for semantic search.
+        k: Number of documents to retrieve.
+
+    Returns:
+        A list of LangChain Document objects.
+
+    Raises:
+        ValueError: If the query is empty or k is less than 1.
+    """
+    if not query or not query.strip():
+        raise ValueError("Query must not be empty.")
+
+    if k <= 0:
+        raise ValueError("k must be greater than zero.")
+
+    vector_store = load_vector_store()
+
+    return vector_store.similarity_search(query=query, k=k)
