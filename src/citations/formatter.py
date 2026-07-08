@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from langchain_core.documents import Document
+from src.retrievers.retrieval_result import RetrievalResult
 
 
 def format_answer(
     answer: str,
-    documents: list[Document],
+    documents: list[RetrievalResult],
 ) -> str:
     """Format a generated answer together with its citations.
 
@@ -29,8 +29,8 @@ def format_answer(
 
     citations: list[str] = []
 
-    for index, document in enumerate(documents, start=1):
-        metadata = document.metadata
+    for index, result in enumerate(documents, start=1):
+        metadata = result.document.metadata
 
         source = metadata.get("source", "Unknown")
         filename = Path(str(source)).name

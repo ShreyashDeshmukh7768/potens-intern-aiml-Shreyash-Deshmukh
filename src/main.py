@@ -17,29 +17,50 @@ def main() -> None:
     """Run the complete multi-document RAG pipeline end to end."""
 
     data_directory = Path("data")
-    question = "How does Retrieval-Augmented Generation (RAG) work?"
+    question = "What is a Transformers?"
 
     try:
-        # Step 1: Load all PDFs
+        # ------------------------------------------------------------------
+        # Step 1: Load all PDF documents
+        # ------------------------------------------------------------------
         documents = load_all_pdfs(data_directory)
 
+        # ------------------------------------------------------------------
         # Step 2: Split documents into chunks
+        # ------------------------------------------------------------------
         chunks = split_documents(documents)
 
-        # Step 3: Create vector database
+        # ------------------------------------------------------------------
+        # Step 3: Create / Update the vector database
+        # ------------------------------------------------------------------
         create_vector_store(chunks)
 
-        # Step 4: Retrieve relevant chunks
-        retrieved_chunks = retrieve_documents(question, k=3)
+        # ------------------------------------------------------------------
+        # Step 4: Retrieve relevant chunks with distance scores
+        # ------------------------------------------------------------------
+        retrieval_results = retrieve_documents(question, k=3)
 
-        # Step 5: Build prompt
-        prompt = build_prompt(question, retrieved_chunks)
+        if not retrieval_results:
+            print("No relevant documents found for this query.")
+            return
 
-        # Step 6: Generate answer
+        # ------------------------------------------------------------------
+        # Step 5: Build the LLM prompt
+        # ------------------------------------------------------------------
+        prompt = build_prompt(question, retrieval_results)
+
+        # ------------------------------------------------------------------
+        # Step 6: Generate grounded answer
+        # ------------------------------------------------------------------
         answer = generate_answer(prompt)
 
+        # ------------------------------------------------------------------
         # Step 7: Format answer with citations
-        final_response = format_answer(answer, retrieved_chunks)
+        # ------------------------------------------------------------------
+        final_response = format_answer(
+            answer,
+            retrieval_results,
+        )
 
     except FileNotFoundError as exc:
         print(f"File not found: {exc}")
@@ -77,22 +98,24 @@ def main() -> None:
     print()
 
     print("=" * 70)
-    print(f"SEMANTIC RETRIEVAL RESULTS (Top {len(retrieved_chunks)})")
+    print(f"SEMANTIC RETRIEVAL RESULTS (Top {len(retrieval_results)})")
     print("=" * 70)
 
-    for index, chunk in enumerate(retrieved_chunks, start=1):
-        metadata = chunk.metadata
+    for index, result in enumerate(retrieval_results, start=1):
+        document = result.document
+        metadata = document.metadata
 
         print(f"Retrieved Result #{index}")
         print("-" * 70)
-        print(f"Source File   : {Path(metadata.get('source', 'Unknown')).name}")
-        print(f"Chunk ID      : {metadata.get('chunk_id')}")
-        print(f"Page          : {metadata.get('page')}")
-        print(f"Chunk Index   : {metadata.get('chunk_index')}")
-        print(f"Characters    : {len(chunk.page_content)}")
+        print(f"Source File     : {Path(metadata.get('source', 'Unknown')).name}")
+        print(f"Chunk ID        : {metadata.get('chunk_id')}")
+        print(f"Page            : {metadata.get('page')}")
+        print(f"Chunk Index     : {metadata.get('chunk_index')}")
+        print(f"Characters      : {len(document.page_content)}")
+        print(f"Distance Score  : {result.score:.4f}")
         print(
-            "Preview       : "
-            f"{chunk.page_content[:200].replace(chr(10), ' ')}..."
+            "Preview         : "
+            f"{document.page_content[:200].replace(chr(10), ' ')}..."
         )
         print()
 

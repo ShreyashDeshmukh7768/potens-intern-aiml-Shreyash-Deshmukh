@@ -2,13 +2,14 @@
 
 from typing import Any
 
-from langchain_core.documents import Document
-
 from src.embeddings.vector_store import (
     COLLECTION_NAME,
     EMBEDDING_MODEL,
     PERSIST_DIRECTORY,
 )
+from src.retrievers.retrieval_result import RetrievalResult
+
+DEFAULT_RELEVANCE_THRESHOLD = 0.7
 
 
 def load_vector_store() -> Any:
@@ -29,15 +30,15 @@ def load_vector_store() -> Any:
     )
 
 
-def retrieve_documents(query: str, k: int = 3) -> list[Document]:
-    """Retrieve the most relevant documents for a query.
+def retrieve_documents(query: str, k: int = 3) -> list[RetrievalResult]:
+    """Retrieve the most relevant documents for a query with similarity scores.
 
     Args:
         query: User query for semantic search.
         k: Number of documents to retrieve.
 
     Returns:
-        A list of LangChain Document objects.
+        A list of retrieval results containing the document and similarity score.
 
     Raises:
         ValueError: If the query is empty or k is less than 1.
@@ -49,5 +50,12 @@ def retrieve_documents(query: str, k: int = 3) -> list[Document]:
         raise ValueError("k must be greater than zero.")
 
     vector_store = load_vector_store()
+    results_with_score = vector_store.similarity_search_with_score(query=query, k=k)
 
-    return vector_store.similarity_search(query=query, k=k)
+    relevant_results = [
+        RetrievalResult(document=document, score=score)
+        for document, score in results_with_score
+        if score <= DEFAULT_RELEVANCE_THRESHOLD
+    ]
+
+    return relevant_results

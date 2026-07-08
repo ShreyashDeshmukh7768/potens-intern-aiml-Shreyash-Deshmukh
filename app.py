@@ -163,20 +163,21 @@ def render_retrieved_chunks(chunks: list) -> None:
         return
 
     st.markdown("## 📦 Retrieved Chunks")
-    for index, chunk in enumerate(chunks, start=1):
-        metadata = chunk.metadata or {}
+    for index, result in enumerate(chunks, start=1):
+        metadata = result.document.metadata or {}
         with st.expander(
             f"Chunk {index}: {metadata.get('chunk_id', f'chunk-{index}')}",
             expanded=index == 1,
         ):
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            chunk_cols = st.columns([1, 1, 1, 1])
+            chunk_cols = st.columns([1, 1, 1, 1, 1])
             chunk_cols[0].metric("Chunk ID", metadata.get("chunk_id", "n/a"))
             chunk_cols[1].metric("Page", metadata.get("page", "n/a"))
             chunk_cols[2].metric("Chunk Index", metadata.get("chunk_index", "n/a"))
-            chunk_cols[3].metric("Characters", len(chunk.page_content))
+            chunk_cols[3].metric("Characters", len(result.document.page_content))
+            chunk_cols[4].metric("Similarity", f"{result.score:.4f}")
             st.markdown("**Preview**")
-            st.write(chunk.page_content[:300])
+            st.write(result.document.page_content[:300])
             st.markdown("**Metadata**")
             st.json(metadata, expanded=False)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -218,15 +219,16 @@ def render_analytics(state: dict) -> None:
 def build_citations(chunks: list) -> list[dict]:
     """Build citation cards from retrieved chunks."""
     citations: list[dict] = []
-    for index, chunk in enumerate(chunks, start=1):
-        metadata = chunk.metadata or {}
+    for index, result in enumerate(chunks, start=1):
+        metadata = result.document.metadata or {}
         citations.append(
             {
                 "label": f"Citation {index}",
                 "details": (
                     f"Chunk ID: {metadata.get('chunk_id', 'n/a')} | "
                     f"Page: {metadata.get('page', 'n/a')} | "
-                    f"Source: {metadata.get('source', 'n/a')}"
+                    f"Source: {metadata.get('source', 'n/a')} | "
+                    f"Score: {result.score:.4f}"
                 ),
             }
         )
@@ -269,6 +271,19 @@ def run_pipeline(state: dict) -> None:
                 state["retrieval_latency"] = f"{retrieval_latency}s"
                 pipeline_progress.progress(0.8)
                 st.write("Top-k semantic retrieval completed.")
+
+                if not retrieved_chunks:
+                    state["answer"] = "No relevant documents found for this query."
+                    state["prompt"] = ""
+                    state["prompt_length"] = 0
+                    state["page_count"] = len(documents)
+                    state["chunk_count"] = len(chunks)
+                    state["retrieved_count"] = 0
+                    state["citations"] = []
+                    state["total_latency"] = round(time.perf_counter() - start_time, 3)
+                    pipeline_progress.progress(1.0)
+                    status.update(label="No relevant documents found", state="complete")
+                    return
 
                 prompt = build_prompt(state.get("question", "What is LangChain?"), retrieved_chunks)
                 state["prompt"] = prompt

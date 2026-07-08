@@ -1,12 +1,12 @@
-from langchain_core.documents import Document
+from src.retrievers.retrieval_result import RetrievalResult
 
 
-def build_prompt(question: str, documents: list[Document]) -> str:
+def build_prompt(question: str, documents: list[RetrievalResult]) -> str:
     """Build a grounded prompt from retrieved documents.
 
     Args:
         question: The user's question.
-        documents: Retrieved LangChain documents.
+        documents: Retrieved documents with similarity scores.
 
     Returns:
         A formatted prompt string.
@@ -21,8 +21,8 @@ def build_prompt(question: str, documents: list[Document]) -> str:
         raise ValueError("Documents must not be empty.")
 
     context = "\n--------------------\n".join(
-        document.page_content.strip()
-        for document in documents
+        result.document.page_content.strip()
+        for result in documents
     )
 
     return f"""
